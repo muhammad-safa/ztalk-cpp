@@ -1,9 +1,10 @@
 #include "zta/lk.h"
 #include <cstdlib>
 
-namespace lk {
-
-Z cons(Z a, Z d) {
+namespace lk
+{
+Z cons(Z a, Z d)
+{
   impl::pair *p = static_cast<impl::pair *>(std::malloc(sizeof(impl::pair)));
   if (!p)
     std::abort();
