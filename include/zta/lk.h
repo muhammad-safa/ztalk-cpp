@@ -1,5 +1,8 @@
-#ifndef ZTALK_H
-#define ZTALK_H
+#ifndef ZTA_LK_H
+#define ZTA_LK_H
+
+#include <stdint.h>
+#include <cstdlib>
 
 namespace lk {
 
@@ -8,28 +11,51 @@ namespace lk {
   };
 
   namespace impl {
+
     constexpr int long_tag_bits = 4;
-    constexpr long_tag_mask = (1UL << long_tag_bits) - 1;
-    inline remove_long_tag(uintptr_t x) { return x & ~long_tag_mask; }
-    template<typename T> as_ptr(uintptr_t x) { return reinterpret_cast<T *>(x); }
-  }
+    constexpr uintptr_t long_tag_mask = (uintptr_t{1} << long_tag_bits) - 1;
+    constexpr int short_tag_bits = 3;
+    constexpr uintptr_t short_tag_mask = (uintptr_t{1} << short_tag_bits) - 1;
 
-  // pairs
+    constexpr uintptr_t pair_tag = 0;
+    constexpr uintptr_t fixnum_tag = 1;
+    constexpr uintptr_t symbol_tag = 2;
+    constexpr uintptr_t string_tag = 3;
+    constexpr uintptr_t bytevector_tag = 4;
+    constexpr uintptr_t vector_tag = 5;
+    constexpr uintptr_t hashtable_tag = 6;
 
-  namespace impl {
-    struct pair {
-      Z car;
-      Z cdr;
-    };
+    inline Z wrap(uintptr_t r) { return Z{r}; }
+    inline uintptr_t raw(Z v) { return v.rep; }
 
-    inline pair &as_pair(Z x) { return *as_ptr<pair>(remove_long_tag(x.rep)); }
-    inline pair &expect_pair(Z x) { if (!is_pair(x)) type_error(x, "pair"); return as_pair(x); }
-  }
+    inline uintptr_t pack_long(long v) {
+      return static_cast<uintptr_t>(v) << long_tag_bits;
+    }
+    inline long unpack_long(Z v) {
+      return static_cast<long>(raw(v)) >> long_tag_bits;
+    }
 
-  Z cons();
-  inline Z car(Z x) { return expect_pair(x).car; }
-  inline Z cdr(Z x) { return expect_pair(x).cdr; }
+    inline bool has_long_tag(Z v, uintptr_t tag) {
+      return (raw(v) & long_tag_mask) == tag;
+    }
+    inline uintptr_t strip_long_tag(Z v) { return raw(v) & ~long_tag_mask; }
 
-}
+    inline Z wrap_ptr(void *p, uintptr_t tag) {
+      return wrap(reinterpret_cast<uintptr_t>(p) | tag);
+    }
+    template <typename T>
+    inline T *ptr(Z v) {
+      return reinterpret_cast<T *>(strip_long_tag(v));
+    }
+
+    [[noreturn]] inline void type_error(const char *) { std::abort(); }
+
+  } // namespace impl
+
+} // namespace lk
+
+#include "lk_fixnum.h"
+#include "lk_pair.h"
 
 #endif
+
